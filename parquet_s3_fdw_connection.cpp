@@ -18,6 +18,7 @@
 #include <dirent.h>
 #include <sys/stat.h>
 #include "parquet_s3_fdw.hpp"
+#include "src/pg_helper.hpp"
 
 extern "C"
 {
@@ -119,7 +120,7 @@ static Aws::S3::S3Client *create_s3_connection(ForeignServer *server, UserMappin
 static void close_s3_connection(ConnCacheEntry *entry);
 static void check_conn_params(const char **keywords, const char **values, UserMapping *user);
 static void parquet_fdw_inval_callback(Datum arg, int cacheid, uint32 hashvalue);
-static Aws::S3::S3Client* s3_client_open(const char *user, const char *password, bool use_minio);
+static Aws::S3::S3Client* s3_client_open(const char *user, const char *password, const char *aws_region, bool use_minio);
 static void s3_client_close(Aws::S3::S3Client *s3_client);
 
 extern "C" void
@@ -338,6 +339,7 @@ create_s3_connection(ForeignServer *server, UserMapping *user, bool use_minio)
 		int			n;
 		char *id = NULL;
 		char *password = NULL;
+		char *aws_region = NULL;
 		ListCell   *lc;
 
 		n = list_length(user->options) + 1;
@@ -361,9 +363,12 @@ create_s3_connection(ForeignServer *server, UserMapping *user, bool use_minio)
 
 			if (strcmp(def->defname, "password") == 0)
 				password = defGetString(def);
+
+			if (strcmp(def->defname, "region") == 0)
+				aws_region = defGetString(def);
 		}
 
-		conn = s3_client_open(id, password, use_minio);
+		conn = s3_client_open(id, password, aws_region, use_minio);
 		if (!conn)
 			ereport(ERROR,
 					(errcode(ERRCODE_SQLCLIENT_UNABLE_TO_ESTABLISH_SQLCONNECTION),
@@ -477,16 +482,21 @@ parquet_fdw_inval_callback(Datum arg, int cacheid, uint32 hashvalue)
  * Create S3 handle.
  */
 static Aws::S3::S3Client*
-s3_client_open(const char *user, const char *password, bool use_minio)
+s3_client_open(const char *user, const char *password, const char *aws_region, bool use_minio)
 {
     const Aws::String access_key_id = user;
     const Aws::String secret_access_key = password;
+
 	Aws::Auth::AWSCredentials cred = Aws::Auth::AWSCredentials(access_key_id, secret_access_key);
 	Aws::S3::S3Client *s3_client;
 
 	pthread_mutex_lock(&cred_mtx);
 	Aws::Client::ClientConfiguration clientConfig;
 	pthread_mutex_unlock(&cred_mtx);
+
+	using S3EndpointProvider = Aws::S3::S3EndpointProvider;
+	using S3EndpointProviderBase = Aws::S3::S3EndpointProviderBase;
+	const char* ALLOCATION_TAG;
 
 	if (use_minio)
 	{
@@ -498,9 +508,10 @@ s3_client_open(const char *user, const char *password, bool use_minio)
 	}
 	else
 	{
+		std::shared_ptr<S3EndpointProviderBase> endpointProvider = Aws::MakeShared<S3EndpointProvider>(ALLOCATION_TAG);
 		clientConfig.scheme = Aws::Http::Scheme::HTTPS;
-		clientConfig.region = Aws::Region::AP_NORTHEAST_1;
-		s3_client = new Aws::S3::S3Client(cred, clientConfig);
+		clientConfig.region = (Aws::String) aws_region;
+		s3_client = new Aws::S3::S3Client(cred, endpointProvider, clientConfig);
 	}
 
 	return s3_client;

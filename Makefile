@@ -1,5 +1,5 @@
 MODULE_big = parquet_s3_fdw
-OBJS = src/common.o src/reader.o src/exec_state.o src/parquet_impl.o src/parquet_fdw.o src/slvars.o
+OBJS = src/pg_helper.o src/common.o src/reader.o src/exec_state.o src/parquet_impl.o src/parquet_fdw.o src/slvars.o
 # Add file for S3
 OBJS += parquet_s3_fdw.o parquet_s3_fdw_connection.o parquet_s3_fdw_server_option.o
 
