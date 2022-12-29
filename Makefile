@@ -1,5 +1,5 @@
 MODULE_big = parquet_s3_fdw
-OBJS = src/common.o src/reader.o src/exec_state.o src/parquet_impl.o src/parquet_fdw.o src/slvars.o
+OBJS = src/pg_helper.o src/common.o src/reader.o src/exec_state.o src/parquet_impl.o src/parquet_fdw.o src/slvars.o
 # Add file for S3
 OBJS += parquet_s3_fdw.o parquet_s3_fdw_connection.o parquet_s3_fdw_server_option.o
 
@@ -15,7 +15,7 @@ DATA = parquet_s3_fdw--0.1.sql parquet_s3_fdw--0.1--0.2.sql parquet_s3_fdw--0.2-
 REGRESS = import_local import_server parquet_s3_fdw_local parquet_s3_fdw_server parquet_s3_fdw_post_local parquet_s3_fdw_post_server parquet_s3_fdw2 schemaless/schemaless_local schemaless/schemaless_server schemaless/import_local schemaless/import_server schemaless/parquet_s3_fdw_local schemaless/parquet_s3_fdw_server schemaless/parquet_s3_fdw_post_local schemaless/parquet_s3_fdw_post_server schemaless/parquet_s3_fdw2
 
 # parquet_impl.cpp requires C++ 11.
-override PG_CXXFLAGS += -std=c++11 -O3
+override PG_CXXFLAGS += -std=c++17 -O3
 
 # pass CCFLAGS (when defined) to both C and C++ compilers.
 ifdef CCFLAGS

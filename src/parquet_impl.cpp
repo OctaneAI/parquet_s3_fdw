@@ -32,6 +32,7 @@
 #include "parquet/statistics.h"
 
 #include "parquet_s3_fdw.hpp"
+#include "pg_helper.hpp"
 #include "heap.hpp"
 #include "exec_state.hpp"
 #include "reader.hpp"
@@ -1353,7 +1354,7 @@ get_table_options(Oid relid, ParquetFdwPlanState *fdw_private)
         else if (strcmp(def->defname, "max_open_files") == 0)
         {
             /* check that int value is valid */
-            fdw_private->max_open_files = pg_atoi(defGetString(def), sizeof(int32), '\0');
+            fdw_private->max_open_files = pg_atoi_polyfill(defGetString(def), sizeof(int32), '\0');
         }
         else if (strcmp(def->defname, "files_in_order") == 0)
         {
@@ -2834,7 +2835,7 @@ parquet_fdw_validator_impl(PG_FUNCTION_ARGS)
         else if (strcmp(def->defname, "max_open_files") == 0)
         {
             /* check that int value is valid */
-            pg_atoi(defGetString(def), sizeof(int32), '\0');
+            pg_atoi_polyfill(defGetString(def), sizeof(int32), '\0');
         }
         else if (strcmp(def->defname, "files_in_order") == 0)
         {
